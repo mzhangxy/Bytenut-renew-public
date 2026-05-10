@@ -2,7 +2,7 @@ name: Bytenut Renew
 
 on:
   #schedule:
-  #  - cron: '45 * * * 3-5' # 每小时自动运行
+  #  - cron: '45 */3 * * 3-5' # 每3小时自动运行
   workflow_dispatch:
 
 permissions:
