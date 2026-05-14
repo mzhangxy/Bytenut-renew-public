@@ -1,0 +1,105 @@
+name: Bytenut 续期 (DP版)
+
+on:
+  schedule:
+    - cron: '12 */3 * * *' 
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  run_renewal:
+    name: 运行续期脚本
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 下载私库脚本
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/Bytenut-renew
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private
+          
+      - name: 📂 移动脚本到工作目录
+        run: mv private/main.py main.py
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装 Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: 安装依赖项
+        run: |
+          python -m pip install --upgrade pip
+          pip install DrissionPage requests
+
+      - name: 安装并启动代理
+        id: proxy
+        env:
+          PROXY_NODE: ${{ secrets.PROXY_NODE }}
+        run: |
+          # (此处保持原有的 Xray 代理逻辑不变，它是独立的)
+          if [ -z "$PROXY_NODE" ]; then
+            echo "use_proxy=false" >> $GITHUB_OUTPUT
+            echo "proxy_server=" >> $GITHUB_OUTPUT
+            echo "[INFO] 未配置代理，直连模式"
+            exit 0
+          fi
+
+          wget -q https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
+          unzip -q Xray-linux-64.zip -d xray && chmod +x xray/xray
+
+          # 代理生成脚本保持不变...
+          python3 << 'PYEOF'
+          # ... 原有 Python 代理配置生成代码 ...
+          PYEOF
+
+          if [ -f "use_external_socks.txt" ]; then
+            EXTERNAL_SOCKS=$(cat use_external_socks.txt)
+            echo "proxy_server=$EXTERNAL_SOCKS" >> $GITHUB_OUTPUT
+            echo "use_proxy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          ./xray/xray run -c xray_config.json > xray.log 2>&1 &
+          sleep 5
+
+          for i in 1 2 3 4 5; do
+            if curl -x socks5://127.0.0.1:1080 -s --max-time 15 https://api.ipify.org > /dev/null 2>&1; then
+              echo "proxy_server=socks5://127.0.0.1:1080" >> $GITHUB_OUTPUT
+              echo "use_proxy=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "use_proxy=false" >> $GITHUB_OUTPUT
+
+      - name: 运行续期脚本
+        env:
+          BYTENUT: ${{ secrets.BYTENUT }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          PROXY: ${{ steps.proxy.outputs.proxy_server }}
+          GITHUB_ACTIONS: "true"
+        run: |
+          # DrissionPage 在无头模式下通常不需要 xvfb-run
+          # 但为了最大程度兼容某些验证码渲染，保留虚拟显示环境也是安全的
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+          xvfb-run -a python3 main.py
+
+      - name: 清理历史
+        if: always()
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          delete_workflow_pattern: ${{ github.workflow }}
+          retain_days: 0
+          keep_minimum_runs: 2
