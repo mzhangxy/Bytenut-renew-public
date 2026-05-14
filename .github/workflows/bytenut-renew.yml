@@ -15,8 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 拉取仓库
+      - name: 📥 下载私库脚本
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/Bytenut-renew
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private
+      - name: 📂 移动脚本到工作目录
+        run: mv private/main.py main.py
 
       - name: 安装Python
         uses: actions/setup-python@v5
