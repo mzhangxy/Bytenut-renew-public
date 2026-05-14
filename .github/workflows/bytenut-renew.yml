@@ -78,10 +78,11 @@ jobs:
           BYTENUT: ${{ secrets.BYTENUT }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          PROXY: "127.0.0.1:10808"
           GITHUB_ACTIONS: "true"
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
-          xvfb-run -a python3 main.py
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" python main.py
 
       - name: 清理历史
         if: always()
