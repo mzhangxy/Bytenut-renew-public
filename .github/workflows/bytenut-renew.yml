@@ -2,7 +2,7 @@ name: Bytenut 续期 (DP版)
 
 on:
   schedule:
-    - cron: '12 */3 * * *' 
+    - cron: '12 */2 * * *' 
   workflow_dispatch:
 
 permissions:
