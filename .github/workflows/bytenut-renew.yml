@@ -356,8 +356,6 @@ jobs:
           PROXY: ${{ steps.proxy.outputs.proxy_server }}
           GITHUB_ACTIONS: "true"
         run: |
-          # DrissionPage 在无头模式下通常不需要 xvfb-run
-          # 但为了最大程度兼容某些验证码渲染，保留虚拟显示环境也是安全的
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
           xvfb-run -a python3 main.py
 
